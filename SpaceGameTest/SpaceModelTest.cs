@@ -93,9 +93,6 @@ namespace SpaceGameTest
             spaceword.createTarget();
             spaceword.createTarget();
 
-            List<Target> targets = spaceword.Targets;
-            int counter = 0;
-
             Mock<IFFileManager> mock = new Mock<IFFileManager>();
             mock.Setup(m => m.LoadGame("path")).Returns(
                 spaceword

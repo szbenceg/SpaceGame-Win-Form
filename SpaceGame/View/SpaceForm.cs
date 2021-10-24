@@ -45,6 +45,9 @@ namespace SpaceGame.View
 
             this.KeyPreview = true;
 
+            this.KeyDown += new KeyEventHandler(this.keyDown);
+            this.KeyUp += new KeyEventHandler(this.keyUp);
+
 
             #region optimalization
             //Optimalization
@@ -94,8 +97,15 @@ namespace SpaceGame.View
 
             model = new SpaceModel(new Persistance.Persistance());
             model.FileName = filePath;
-            model.loadGame();
-            startGame();
+            if (filePath != null && filePath != "")
+            {
+                model.loadGame();
+                startGame();
+            }
+            else {
+                simpleGameStart = true;
+            }
+
         }
 
         private void saveGameButtonClicked(object sender, EventArgs e)
@@ -130,9 +140,6 @@ namespace SpaceGame.View
 
             this.Controls.Clear();
 
-            this.KeyDown += new KeyEventHandler(this.keyDown);
-            this.KeyUp += new KeyEventHandler(this.keyUp);
-
             timerFinsihed = true;
             pausePressed = false;
 
@@ -166,9 +173,6 @@ namespace SpaceGame.View
                 model.initializeGame();
                 simpleGameStart = true;
             }
-
-
-
 
             player.Image = Properties.Resources.rocket;
             player.Size = new Size(model.PlayerWidth, model.PlayerHeight);
@@ -260,6 +264,10 @@ namespace SpaceGame.View
         private void gameOver(object sender, EventArgs e)
         {
             pause();
+            var tmp = this.Controls.OfType<Button>().Where(x => (string)x.Tag == "saveGameButton").ToArray();
+            this.Controls.Remove(tmp[0]);
+            tmp = this.Controls.OfType<Button>().Where(x => (string)x.Tag == "loadGameButton").ToArray();
+            this.Controls.Remove(tmp[0]);
             showRestartScreen();
         }
         private void targetmoveTimerTick(object sender, EventArgs e)
@@ -358,11 +366,14 @@ namespace SpaceGame.View
                 model.LifeChanged -= new EventHandler<int>(lifeChanged);
 
                 showButton("SAVE GAME", "saveGameButton", new Point(240, 450), new Size(300, 80), this.saveGameButtonClicked);
+                showButton("LOAD GAME FROM FILE", "loadGameButton", new Point(240, 345), new Size(300, 80), this.loadGameFromFileButtonClicked);
 
             }
             else
             {
                 var tmp = this.Controls.OfType<Button>().Where(x => (string)x.Tag == "saveGameButton").ToArray();
+                this.Controls.Remove(tmp[0]);
+                tmp = this.Controls.OfType<Button>().Where(x => (string)x.Tag == "loadGameButton").ToArray();
                 this.Controls.Remove(tmp[0]);
 
                 pausePressed = false;

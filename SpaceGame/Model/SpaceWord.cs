@@ -61,7 +61,43 @@ namespace SpaceGame.Model
                 windowHeight = value;
             }
         }
-  
+
+        public int WindowWidth
+        {
+            get
+            {
+                return windowWidth;
+            }
+            set
+            {
+                windowWidth = value;
+            }
+        }
+
+        public int TargetWidth
+        {
+            get
+            {
+                return targetWidth;
+            }
+            set
+            {
+                targetWidth = value;
+            }
+        }
+
+        public int TargetHeight
+        {
+            get
+            {
+                return targetHeight;
+            }
+            set
+            {
+                targetHeight = value;
+            }
+        }
+
         public int LifeNumber
         {
             get
