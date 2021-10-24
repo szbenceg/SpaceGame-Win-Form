@@ -1,7 +1,9 @@
 ﻿
+using SpaceGame.Persistance;
+
 namespace SpaceGame.Model
 {
-    class Target : ComponentProperties
+    public class Target : ComponentProperties
     {
         public string status = "";
         public Target(int psX, int psY, int width, int height) {

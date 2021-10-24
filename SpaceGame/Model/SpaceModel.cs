@@ -1,108 +1,80 @@
-﻿using System;
+﻿using SpaceGame.Persistance;
+using System;
 using System.Collections.Generic;
 
 namespace SpaceGame.Model
 {
-    class SpaceModel
+    public class SpaceModel
     {
-        #region Private fields
 
-        private int windowHeight;
-        private int windowWidth;
-
-        private int targetWidth;
-        private int targetHeight;
-
-        private int lifeNumber;
-
-        private int targetCreateTimer = 2000;
-        private int targetMoveTimer = 50;
-        private int speedUpTimer = 5000;
-        private int gameTimeSeconds = 0;
-
-        public List<Target> targets;
-        public Player player;
-
-        Random random = new Random();
-
-        #endregion
         #region events
       
         public event EventHandler<Player> PlayerChanged;
         public event EventHandler<Target> TargetChanged;
         public event EventHandler<int> LifeChanged;
         public event EventHandler GameOver;
-
         #endregion
+
+        private SpaceWord spaceWord;
+        private IFFileManager dataAccess;
+        private string fileName;
+
         #region methods
 
-        public void StartGame(int width, int height) {
-
-            this.windowHeight = height;
-            this.windowWidth = width;
-
-            targets = new List<Target>();
-            player = new Player();
-
-            player.PositionX = width / 2 - (player.Width / 2);
-            player.PositionY = height - 100;
-            lifeNumber = 3;
-
-            PlayerChanged?.Invoke(this, player);
-            LifeChanged?.Invoke(this, lifeNumber);
-
+        public SpaceModel() { }
+        public SpaceModel(IFFileManager fileManager) {
+            dataAccess = fileManager;
         }
 
-        private bool collide(Target target, Player player) {
+        public void StartGame(int width, int height, int targetWidth, int targetHeight, int playerWidth, int playerHeight) {
 
-            if (player.PositionX + player.Width/ 2 <= target.PositionX + target.Width + player.Width/ 2 + 2 &&
-              player.PositionX + player.Width / 2 >= target.PositionX - player.Width / 2 - 2 &&
-              player.PositionY <= target.PositionY+ target.Height &&
-              player.PositionY >= target.PositionY)
-            {
-                return true;
-            }
-            else
-            {
-                return false;
-            }
+            spaceWord = new SpaceWord(width, height, targetWidth, targetHeight, playerWidth, playerHeight);
+
+            PlayerChanged?.Invoke(this, spaceWord.Player);
+            LifeChanged?.Invoke(this, spaceWord.LifeNumber);
+
         }
-
         public string saveGame() {
-            string json = Newtonsoft.Json.JsonConvert.SerializeObject(this);
-            return json;
+            dataAccess = new SpaceGame.Persistance.Persistance();
+            return dataAccess.SaveGame(spaceWord);
         }
 
         public void initializeGame() {
-            foreach (Target target in targets) {
+            foreach (Target target in spaceWord.Targets) {
                 TargetChanged?.Invoke(this, target);
             }
-            PlayerChanged?.Invoke(this, player);
-            LifeChanged?.Invoke(this, lifeNumber);
+            PlayerChanged?.Invoke(this, spaceWord.Player);
+            LifeChanged?.Invoke(this, spaceWord.LifeNumber);
         }
 
         public void moveLeft() {
-            player.moveLeft();
-            PlayerChanged?.Invoke(this, player);
+            spaceWord.Player.moveLeft();
+            PlayerChanged?.Invoke(this, spaceWord.Player);
+        }
+
+        public void loadGame()
+        {
+            spaceWord = dataAccess.LoadGame(fileName);
+            initializeGame();
         }
 
         public void moveRight()
         {
-            player.moveRight();
-            PlayerChanged?.Invoke(this, player);
+            spaceWord.Player.moveRight();
+            PlayerChanged?.Invoke(this, spaceWord.Player);
         }
 
         public void createTarget()
         {
-            targets.Add(new Target(random.Next(0, windowWidth-targetWidth), 0, targetWidth, targetHeight));
+            spaceWord.createTarget();
         }
 
         public void moveTargets() {
             List<Target> tmp = new List<Target>();
-            foreach (Target target in targets) {
+            foreach (Target target in spaceWord.Targets) {
                 target.moveDown();
-                bool collided = collide(target, player);
-                bool outOfScreen = target.PositionY > windowHeight - 0;
+                bool collided = spaceWord.collide(target, spaceWord.Player);
+                bool outOfScreen = target.PositionY > spaceWord.WindowHeight - 0;
                 if (outOfScreen)
                 {
                     target.status = "DELETE";
@@ -112,9 +84,9 @@ namespace SpaceGame.Model
                 {
                     target.status = "DELETE";
                     tmp.Add(target);
-                    lifeNumber--;
-                    LifeChanged?.Invoke(this, lifeNumber);
-                    if (lifeNumber == 0) {
+                    spaceWord.LifeNumber = spaceWord.LifeNumber - 1;
+                    LifeChanged?.Invoke(this, spaceWord.LifeNumber);
+                    if (spaceWord.LifeNumber == 0) {
                         GameOver?.Invoke(this, EventArgs.Empty);
                     }
                 }
@@ -122,78 +94,39 @@ namespace SpaceGame.Model
             }
 
             foreach (Target target in tmp) {
-                targets.Remove(target);
+                spaceWord.removeTarget(target);
             }
         }
 
         #endregion
 
-        #region Setter/Getter for json
-        public int TargetWidth
-        {
-            get
-            {
-                return targetWidth;
-            }
-            set
-            {
-                targetWidth = value;
-            }
-        }
-        public int TargetHeight
-        {
-            get
-            {
-                return targetHeight;
-            }
-            set
-            {
-                targetHeight = value;
-            }
-        }
+        #region Setter/Getter
 
-        public int WindowHeight
+        public int PlayerWidth
         {
             get
             {
-                return windowHeight;
+                return spaceWord.Player.Width;
             }
-            set
-            {
-                windowHeight = value;
-            }
+
         }
-        public int WindowWidth
+        public int PlayerHeight
         {
             get
             {
-                return windowWidth;
+                return spaceWord.Player.Height;
             }
-            set
-            {
-                windowWidth = value;
-            }
-        }
-        public int LifeNumber
-        {
-            get
-            {
-                return lifeNumber;
-            }
-            set
-            {
-                lifeNumber = value;
-            }
+
         }
         public int TargetCreateTimer
         {
             get
             {
-                return targetCreateTimer;
+                return spaceWord.TargetCreateTimer;
             }
             set
             {
-                targetCreateTimer = value;
+                spaceWord.TargetCreateTimer = value;
             }
         }
 
@@ -201,11 +134,11 @@ namespace SpaceGame.Model
         {
             get
             {
-                return targetMoveTimer;
+                return spaceWord.TargetMoveTimer;
             }
             set
             {
-                targetMoveTimer = value;
+                spaceWord.TargetMoveTimer = value;
             }
         }
 
@@ -213,11 +146,11 @@ namespace SpaceGame.Model
         {
             get
             {
-                return speedUpTimer;
+                return spaceWord.SpeedUpTimer;
             }
             set
             {
-                speedUpTimer = value;
+                spaceWord.SpeedUpTimer = value;
             }
         }
 
@@ -225,11 +158,23 @@ namespace SpaceGame.Model
         {
             get
             {
-                return gameTimeSeconds;
+                return spaceWord.GameTimeSeconds;
             }
             set
             {
-                gameTimeSeconds = value;
+                spaceWord.GameTimeSeconds = value;
+            }
+        }
+
+        public string FileName
+        {
+            get
+            {
+                return fileName;
+            }
+            set
+            {
+                fileName = value;
             }
         }
 
