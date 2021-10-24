@@ -6,9 +6,9 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace SpaceGame.Model
+namespace SpaceGame.Persistance
 {
-    class ComponentProperties
+    public class ComponentProperties
     {
 
         private int speed;
@@ -82,11 +82,6 @@ namespace SpaceGame.Model
 
         public void moveRight() {
             PositionX += speed;
-        }
-
-        public void moveUp()
-        {
-
         }
 
         public void moveDown()

@@ -1,14 +1,12 @@
-﻿using System;
+﻿using SpaceGame.Model;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows.Forms;
-using Nancy.Json;
-using SpaceGame.Model;
 
 namespace SpaceGame.View
 {
@@ -31,15 +29,8 @@ namespace SpaceGame.View
         PictureBox lifePictureBox1;
         PictureBox lifePictureBox2;
 
-        //Button loadButton;
-
         private bool simpleGameStart = true;
         Stopwatch stopper;
-
-        //[DllImport("kernel32.dll", SetLastError = true)]
-        //[return: MarshalAs(UnmanagedType.Bool)]
-        //static extern bool AllocConsole();
-
 
         public SpaceForm()
         {
@@ -49,10 +40,13 @@ namespace SpaceGame.View
 
             showButton("START GAME", "startButton", new Point(240, 345), new Size(300, 80), this.startButtonClicked);
 
-            showButton("LOAD GAME FROM FILE", "loadGameButton",new Point(240, 450), new Size(300, 80), this.loadGameFromFileButtonClicked);
+            showButton("LOAD GAME FROM FILE", "loadGameButton", new Point(240, 450), new Size(300, 80), this.loadGameFromFileButtonClicked);
 
 
             this.KeyPreview = true;
+
+            this.KeyDown += new KeyEventHandler(this.keyDown);
+            this.KeyUp += new KeyEventHandler(this.keyUp);
 
 
             #region optimalization
@@ -73,7 +67,7 @@ namespace SpaceGame.View
         private void startButtonClicked(object sender, EventArgs e)
         {
             startGame();
-            
+
         }
 
         private void restartButtonClicked(object sender, EventArgs e)
@@ -81,7 +75,8 @@ namespace SpaceGame.View
             startGame();
         }
 
-        private void loadGameFromFileButtonClicked(object sender, EventArgs e) {
+        private void loadGameFromFileButtonClicked(object sender, EventArgs e)
+        {
 
             simpleGameStart = false;
 
@@ -97,18 +92,20 @@ namespace SpaceGame.View
                 if (openFileDialog.ShowDialog() == DialogResult.OK)
                 {
                     filePath = openFileDialog.FileName;
-
-                    var fileStream = openFileDialog.OpenFile();
-
-                    using (StreamReader reader = new StreamReader(fileStream))
-                    {
-                        fileContent = reader.ReadToEnd();
-                    }
                 }
             }
 
-            model = Newtonsoft.Json.JsonConvert.DeserializeObject<SpaceModel>(fileContent);
-            startGame();
+            model = new SpaceModel(new Persistance.Persistance());
+            model.FileName = filePath;
+            if (filePath != null && filePath != "")
+            {
+                model.loadGame();
+                startGame();
+            }
+            else {
+                simpleGameStart = true;
+            }
+
         }
 
         private void saveGameButtonClicked(object sender, EventArgs e)
@@ -135,17 +132,13 @@ namespace SpaceGame.View
 
         }
 
-
-
         #endregion
 
-        public void startGame() {
+        public void startGame()
+        {
             //Events
 
             this.Controls.Clear();
-
-            this.KeyDown += new KeyEventHandler(this.keyDown);
-            this.KeyUp += new KeyEventHandler(this.keyUp);
 
             timerFinsihed = true;
             pausePressed = false;
@@ -155,7 +148,7 @@ namespace SpaceGame.View
 
             if (simpleGameStart)
             {
-                model = new SpaceModel();
+                model = new SpaceModel(new Persistance.Persistance());
 
                 model.PlayerChanged += new EventHandler<Player>(playerChanged);
                 model.TargetChanged += new EventHandler<Target>(targetChanged);
@@ -164,19 +157,12 @@ namespace SpaceGame.View
 
                 showLives();
 
-                model.StartGame(Width, Height);
-
-                //Player configuration
-                model.player.Height = 60;
-                model.player.Width = 50;
-                model.player.Speed = 12;
-
-                model.TargetWidth = 55;
-                model.TargetHeight = 48;
+                model.StartGame(Width, Height, 55, 48, 60, 50);
 
                 stopper = Stopwatch.StartNew();
             }
-            else {
+            else
+            {
                 model.PlayerChanged += new EventHandler<Player>(playerChanged);
                 model.TargetChanged += new EventHandler<Target>(targetChanged);
                 model.LifeChanged += new EventHandler<int>(lifeChanged);
@@ -188,11 +174,8 @@ namespace SpaceGame.View
                 simpleGameStart = true;
             }
 
-
-
-
             player.Image = Properties.Resources.rocket;
-            player.Size = new Size(model.player.Width, model.player.Height);
+            player.Size = new Size(model.PlayerWidth, model.PlayerHeight);
             player.SizeMode = PictureBoxSizeMode.StretchImage;
             player.BackColor = Color.Transparent;
 
@@ -218,14 +201,17 @@ namespace SpaceGame.View
         #region Event handlers
         private void lifeChanged(object sender, int lifeNumber)
         {
-            if (lifeNumber == 2) {
+            if (lifeNumber == 2)
+            {
                 lifePictureBox2.Image = Properties.Resources.emptyLife;
             }
-            if (lifeNumber == 1) {
+            if (lifeNumber == 1)
+            {
                 lifePictureBox1.Image = Properties.Resources.emptyLife;
                 lifePictureBox2.Image = Properties.Resources.emptyLife;
             }
-            if (lifeNumber == 0) {
+            if (lifeNumber == 0)
+            {
                 lifePictureBox0.Image = Properties.Resources.emptyLife;
                 lifePictureBox1.Image = Properties.Resources.emptyLife;
                 lifePictureBox2.Image = Properties.Resources.emptyLife;
@@ -234,16 +220,19 @@ namespace SpaceGame.View
         }
         private void targetChanged(object sender, Target target)
         {
-           
-            if (targets.ContainsKey(target)){
+
+            if (targets.ContainsKey(target))
+            {
                 targets[target].Left = target.PositionX;
                 targets[target].Top = target.PositionY;
-                if (target.status == "DELETE") {
+                if (target.status == "DELETE")
+                {
                     this.Controls.Remove(targets[target]);
                     targets.Remove(target);
                 }
             }
-            else {
+            else
+            {
 
                 PictureBox pictureBoxTarget = new PictureBox();
                 pictureBoxTarget.Image = Properties.Resources.target;
@@ -266,7 +255,7 @@ namespace SpaceGame.View
             player.Left = component.PositionX;
             player.Top = component.PositionY;
             this.Controls.Add(player);
-           
+
         }
 
         #endregion
@@ -275,9 +264,14 @@ namespace SpaceGame.View
         private void gameOver(object sender, EventArgs e)
         {
             pause();
+            var tmp = this.Controls.OfType<Button>().Where(x => (string)x.Tag == "saveGameButton").ToArray();
+            this.Controls.Remove(tmp[0]);
+            tmp = this.Controls.OfType<Button>().Where(x => (string)x.Tag == "loadGameButton").ToArray();
+            this.Controls.Remove(tmp[0]);
             showRestartScreen();
         }
-        private void targetmoveTimerTick(object sender, EventArgs e) {
+        private void targetmoveTimerTick(object sender, EventArgs e)
+        {
             if (timerFinsihed)
             {
                 timerFinsihed = false;
@@ -286,13 +280,15 @@ namespace SpaceGame.View
             }
         }
 
-        private void targetCreateTimerTick(object sender, EventArgs e) {
+        private void targetCreateTimerTick(object sender, EventArgs e)
+        {
             model.createTarget();
         }
 
         private void speedUpTimerTick(object sender, EventArgs e)
         {
-            if (targetCreateTimer.Interval > 200) {
+            if (targetCreateTimer.Interval > 200)
+            {
                 targetCreateTimer.Interval = (model.TargetCreateTimer -= 100);
             }
         }
@@ -302,10 +298,11 @@ namespace SpaceGame.View
         #region Key Events
         private void keyDown(object sender, KeyEventArgs e)
         {
-            if (e.KeyCode == Keys.Left) {
+            if (e.KeyCode == Keys.Left)
+            {
                 model.moveLeft();
             }
-            
+
             if (e.KeyCode == Keys.Right)
             {
                 model.moveRight();
@@ -325,7 +322,8 @@ namespace SpaceGame.View
 
         #region Functions
 
-        public void showButton(string title, string name, Point position, Size size, Action<object, EventArgs> eventHandler){
+        public void showButton(string title, string name, Point position, Size size, Action<object, EventArgs> eventHandler)
+        {
             Button button = new Button();
             button.Text = title;
             button.Location = position;
@@ -338,7 +336,8 @@ namespace SpaceGame.View
             this.Controls.Add(button);
         }
 
-        public void showLabel(string title, string name, Point position, Size size){
+        public void showLabel(string title, string name, Point position, Size size)
+        {
             Label label = new Label();
             label.Text = title;
             label.ForeColor = Color.White;
@@ -353,7 +352,8 @@ namespace SpaceGame.View
             this.Controls.Add(label);
         }
 
-        private void pause() {
+        private void pause()
+        {
             //TODO game over figyel
             if (!pausePressed)
             {
@@ -366,11 +366,14 @@ namespace SpaceGame.View
                 model.LifeChanged -= new EventHandler<int>(lifeChanged);
 
                 showButton("SAVE GAME", "saveGameButton", new Point(240, 450), new Size(300, 80), this.saveGameButtonClicked);
+                showButton("LOAD GAME FROM FILE", "loadGameButton", new Point(240, 345), new Size(300, 80), this.loadGameFromFileButtonClicked);
 
             }
             else
             {
                 var tmp = this.Controls.OfType<Button>().Where(x => (string)x.Tag == "saveGameButton").ToArray();
+                this.Controls.Remove(tmp[0]);
+                tmp = this.Controls.OfType<Button>().Where(x => (string)x.Tag == "loadGameButton").ToArray();
                 this.Controls.Remove(tmp[0]);
 
                 pausePressed = false;
@@ -384,7 +387,8 @@ namespace SpaceGame.View
             }
         }
 
-        private void showRestartScreen() {
+        private void showRestartScreen()
+        {
 
             stopper.Stop();
             int ellapsedTime = (int)(stopper.ElapsedMilliseconds / 1000) + model.GameTimeSeconds;
@@ -397,7 +401,8 @@ namespace SpaceGame.View
 
         }
 
-        private void showLives() {
+        private void showLives()
+        {
             //TODO make dynamic
             #region Life picture boxis not dynamic
             lifePictureBox0 = new PictureBox();
